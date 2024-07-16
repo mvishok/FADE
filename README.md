@@ -19,7 +19,7 @@ FSDE is a development environment that includes Fastre and SyncEngine. It simpli
 ## Usage
 
 - **Fastre**: `fsde install fastre` This will install Fastre and its dependencies.
-- (NOT READY) **SyncEngine**: `syncengin <config-file>`
+- (NOT READY) **SyncEngine**: `fsde install syncengin`
 
 ## Auto-update
 
