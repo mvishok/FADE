@@ -13,7 +13,7 @@ FSDE is a development environment that includes Fastre and SyncEngine. It simpli
 
 ## Installation
 
-1. Download the FSDE installer from the [releases page](https://github.com/your-repo/releases).
+1. Download the FSDE installer from the [releases page](https://github.com/mvishok/fsde/releases).
 2. Run the installer and follow the instructions.
 
 ## Usage
