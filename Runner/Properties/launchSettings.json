@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Runner": {
+      "commandName": "Project",
+      "commandLineArgs": "\"fastre\" --config config.json"
+    }
+  }
+}

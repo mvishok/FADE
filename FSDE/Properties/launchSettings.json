@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FSDE": {
+      "commandName": "Project",
+      "commandLineArgs": "install fastre"
+    }
+  }
+}
