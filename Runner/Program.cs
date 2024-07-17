@@ -60,7 +60,6 @@ namespace RUNNER
                     {
                         logger.Warning("New version of Fastre available: " + cv);
                         logger.Warning("Install the new version using 'fsde fastre install'");
-                        return;
                     }
                 }
 
