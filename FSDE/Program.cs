@@ -70,7 +70,7 @@ namespace FSDE
                 logger.Error("Failed to get installantion directory");
                 return;
             }
-            
+
             if (package == "fastre")
             {
 
@@ -115,10 +115,10 @@ namespace FSDE
 
                 //check if fastre is already installed in ./fastre directory
                 logger.Info("Checking existing Fastre installation");
-                if (Directory.Exists(currentDirectory+"\\fastre"))
+                if (Directory.Exists(currentDirectory + "\\fastre"))
                 {
                     //load package.json if exists
-                    if (File.Exists(currentDirectory+"\\fastre\\package.json"))
+                    if (File.Exists(currentDirectory + "\\fastre\\package.json"))
                     {
                         var packageJson = File.ReadAllText(currentDirectory + "\\fastre\\package.json");
                         var jsonObj = JObject.Parse(packageJson);
@@ -159,7 +159,7 @@ namespace FSDE
                 //download
                 logger.Info("Downloading Fastre " + fastreLatest);
                 string fastre = $"https://github.com/mvishok/fastre/archive/refs/tags/{fastreLatest}.zip";
-                bool downloadedFastre = await Downloader.DownloadFileWithProgress(fastre, currentDirectory+"\\fastre.zip");
+                bool downloadedFastre = await Downloader.DownloadFileWithProgress(fastre, currentDirectory + "\\fastre.zip");
 
                 if (!downloadedFastre)
                 {
@@ -175,8 +175,8 @@ namespace FSDE
                 logger.Info("Extracting Fastre " + fastreLatest);
                 try
                 {
-                    System.IO.Compression.ZipFile.ExtractToDirectory(currentDirectory+"\\fastre.zip", currentDirectory);
-                    Directory.Move(currentDirectory+"\\fastre-" + fastreLatest, currentDirectory + "\\fastre");
+                    System.IO.Compression.ZipFile.ExtractToDirectory(currentDirectory + "\\fastre.zip", currentDirectory);
+                    Directory.Move(currentDirectory + "\\fastre-" + fastreLatest, currentDirectory + "\\fastre");
                     logger.Success("Fastre " + fastreLatest + " extracted successfully");
                     File.Delete(currentDirectory + "\\fastre.zip");
                 }
@@ -214,6 +214,85 @@ namespace FSDE
 
 
                 logger.Success("Fastre " + fastreLatest + " installed successfully");
+            }
+            else if (package == "syncengin")
+            {
+
+                //get latest version of syncengin
+                logger.Info("Fetching latest tag of SyncEngin");
+                string syncenginLatest = await FetchLatestTag("syncengin", logger);
+                var lv = new Version(syncenginLatest);
+
+                //Check if syncengin is already downloaded to currentDirectory/syncengin/
+                if (Directory.Exists(currentDirectory + "\\syncengin"))
+                {
+                    if (File.Exists(currentDirectory + "\\syncengin\\syncengin.exe") && File.Exists(currentDirectory + "\\syncengin\\ver.txt"))
+                    {
+                        //check version of existing installation at /syncengin/ver.txt
+                        string version = File.ReadAllText(currentDirectory + "\\syncengin\\ver.txt");
+                        var cv = new Version(version);
+
+                        if (cv.CompareTo(lv) >= 0)
+                        {
+                            logger.Info("SyncEngin " + version + " is already installed");
+                            return;
+                        }
+                        else
+                        {
+                            logger.Info("SyncEngin " + version + " is outdated");
+                            logger.Warning("SyncEngin " + version + " will be updated to " + syncenginLatest);
+                            logger.Warning("This operation will overwrite the existing installation.");
+                            logger.Warning("Directory to be overwritten: " + currentDirectory + "\\syncengin");
+                            logger.Warning("Do you want to continue? (y/n)");
+                            string? response = Console.ReadLine();
+                            if (response?.ToLower() != "y")
+                            {
+                                logger.Info("Installation aborted");
+                                return;
+                            }
+
+                            //delete existing syncengin directory
+                            logger.Info("Deleting existing SyncEngin installation");
+                            Directory.Delete(currentDirectory + "\\syncengin", true);
+                        }
+                    }
+                }
+
+                Directory.CreateDirectory(currentDirectory + "\\syncengin");
+
+                //download
+                logger.Info("Downloading SyncEngin " + syncenginLatest);
+                string syncengin = $"https://github.com/mvishok/syncengin/releases/download/{syncenginLatest}/syncengin.exe";
+                bool downloadedSynengin = await Downloader.DownloadFileWithProgress(syncengin, currentDirectory + "\\syncengin\\syncengin.exe");
+
+                if (!downloadedSynengin)
+                {
+                    logger.Error("Failed to download Fastre " + syncenginLatest);
+                    return;
+                }
+                else
+                {
+                    logger.Success("SyncEngin " + syncenginLatest + " downloaded successfully");
+                }
+
+                //create ver.txt
+                File.WriteAllText(currentDirectory + "\\syncengin\\ver.txt", syncenginLatest);
+
+                //create runner
+                logger.Info("Creating SyncEngin runner");
+                string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "runner.exe \"syncengin\" %ARGS%";
+                try
+                {
+                    File.WriteAllText(currentDirectory + "/syncengin.bat", batContent);
+                    logger.Success("SyncEngin runner created successfully");
+                }
+                catch (Exception ex)
+                {
+                    logger.Error("Failed to create SyncEngin runner: " + ex.Message);
+                    return;
+                }
+
+                logger.Success("SyncEngin " + syncenginLatest + " installed successfully");
             }
         }
 

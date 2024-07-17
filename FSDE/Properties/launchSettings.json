@@ -2,7 +2,7 @@
   "profiles": {
     "FSDE": {
       "commandName": "Project",
-      "commandLineArgs": "install fastre"
+      "commandLineArgs": "install syncengin"
     }
   }
 }
