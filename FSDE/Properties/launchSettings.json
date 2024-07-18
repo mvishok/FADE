@@ -2,7 +2,7 @@
   "profiles": {
     "FSDE": {
       "commandName": "Project",
-      "commandLineArgs": "install syncengin"
+      "commandLineArgs": "install"
     }
   }
 }

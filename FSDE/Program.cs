@@ -294,6 +294,8 @@ namespace FSDE
 
                 logger.Success("SyncEngin " + syncenginLatest + " installed successfully");
             }
+
+            return;
         }
 
         static async Task<string> FetchLatestTag(string package, Logger logger)
