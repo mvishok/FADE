@@ -11,6 +11,14 @@ namespace RUNNER
         static async Task Main(string[] args)
         {
             Logger logger = new Logger();
+
+            //when app is closed with ctrl+c
+            Console.CancelKeyPress += (sender, e) =>
+            {
+                Cmd.KillChildProcesses(logger);
+            };
+
+
             string? currentDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             if (currentDirectory == null)
             {
@@ -30,12 +38,27 @@ namespace RUNNER
             }
             else if (args[0] == "syncengin")
             {
-                logger.Error("Syncengin is not available.");
+                await RunSyncEngin(currentDirectory, logger, args);
             }
             else
             {
                 logger.Error("Unknown package: " + args[0]);
             }
+        }
+
+        private static void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void CurrentDomain_ProcessExit1(object? sender, EventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void CurrentDomain_ProcessExit(object? sender, EventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         static async Task RunFastre(string currentDirectory, Logger logger, string[] args)
@@ -65,7 +88,7 @@ namespace RUNNER
 
                 // Get remaining arguments as string
                 string arguments = string.Join(" ", args.Skip(1));
-                int exitCode = await Cmd.CmdAsync($"cd \"{currentDirectory}/fastre\" && node fastre.js {arguments}");
+                int exitCode = await Cmd.FastreAsync($"cd \"{currentDirectory}/fastre\" && node fastre.js {arguments}");
 
                 if (exitCode != 0)
                 {
@@ -76,6 +99,45 @@ namespace RUNNER
             else
             {
                 logger.Error("Fastre is not installed. Install it using 'fsde fastre install'");
+            }
+        }
+
+        static async Task RunSyncEngin(string currentDirectory, Logger logger, string[] args)
+        {
+            if (Directory.Exists(currentDirectory + "\\syncengin") && File.Exists(currentDirectory + "\\syncengin\\ver.txt"))
+            {
+                string fastreLatest = FetchLatestTagSync("syncengin", logger);
+                var lv = new Version(fastreLatest);
+
+                // Check if the installed version is less than the latest version
+                string version = File.ReadAllText(currentDirectory + "\\syncengin\\ver.txt");
+                if (version == null)
+                {
+                    logger.Error("Failed to read SyncEngin version from ver.txt");
+                }
+                else
+                {
+                    var cv = new Version(version);
+                    if (cv.CompareTo(lv) < 0)
+                    {
+                        logger.Warning("New version of SyncEngin available: " + cv);
+                        logger.Warning("Install the new version using 'fsde syncengin install'");
+                    }
+                }
+
+                // Get remaining arguments as string
+                string arguments = string.Join(" ", args.Skip(1));
+                int exitCode = await Cmd.SyncEnginAsync($"cd \"{currentDirectory}/syncengin\" && syncengin {arguments}");
+
+                if (exitCode != 0)
+                {
+                    Console.Write("\n");
+                    logger.Error("SyncEngin exited with code " + exitCode);
+                }
+            }
+            else
+            {
+                logger.Error("SyncEngin is not installed. Install it using 'fsde syncengin install'");
             }
         }
 
