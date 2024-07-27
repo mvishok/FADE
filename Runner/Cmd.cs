@@ -14,15 +14,34 @@ namespace FADE
             Process process = new Process();
             process.StartInfo.FileName = "cmd.exe";
             process.StartInfo.Arguments = "/c " + command;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.StandardOutputEncoding = Encoding.UTF8;
+            process.StartInfo.StandardErrorEncoding = Encoding.UTF8;
             process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = false;
-            process.StartInfo.RedirectStandardError = false;
-            process.StartInfo.CreateNoWindow = false;
+            process.StartInfo.CreateNoWindow = true;
             process.StartInfo.EnvironmentVariables["FORCE_COLOR"] = "1"; // Force color output
 
-            // Start the process
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    AnsiConsole.WriteLine(e.Data);
+                }
+            };
+
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    AnsiConsole.Markup("[red]" + e.Data + "[/]");
+                }
+            };
+
             _childProcesses.Add(process);
             process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
 
             await process.WaitForExitAsync();
             return process.ExitCode;

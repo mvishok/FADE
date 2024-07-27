@@ -104,6 +104,27 @@ namespace RUNNER
 
         static async Task RunAutobase(string currentDirectory, Logger logger, string[] args)
         {
+            if (args.Length == 2)
+            {
+                //check if args[2] is either absolute or relative path. if it is relative path, convert it to absolute path with called directory
+                //get current shell working directory
+                string? cwd = Directory.GetCurrentDirectory();
+                string? configPath = args[1];
+                if (!Path.IsPathRooted(configPath))
+                {
+                    configPath = Path.GetFullPath(Path.Combine(cwd, configPath));
+                } else
+                {
+                    configPath = Path.GetFullPath(configPath);
+                }
+
+                args[1] = configPath;
+            } else
+            {
+                logger.Error("No config file provided.");
+                return;
+            }
+
             if (Directory.Exists(currentDirectory + "\\autobase") && File.Exists(currentDirectory + "\\autobase\\ver.txt"))
             {
                 string fastreLatest = FetchLatestTagSync("autobase", logger);
@@ -127,7 +148,7 @@ namespace RUNNER
 
                 // Get remaining arguments as string
                 string arguments = string.Join(" ", args.Skip(1));
-                int exitCode = await Cmd.AutobaseAsync($"cd \"{currentDirectory}/autobase\" && autobase {arguments}");
+                int exitCode = await Cmd.FastreAsync($"cd \"{currentDirectory}/autobase\" && autobase {arguments}");
 
                 if (exitCode != 0)
                 {
