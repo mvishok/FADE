@@ -1,4 +1,4 @@
-﻿using FSDE;
+﻿using FADE;
 using System;
 using System.Diagnostics;
 using Newtonsoft.Json.Linq;
@@ -36,9 +36,9 @@ namespace RUNNER
             {
                 await RunFastre(currentDirectory, logger, args);
             }
-            else if (args[0] == "syncengin")
+            else if (args[0] == "autobase")
             {
-                await RunSyncEngin(currentDirectory, logger, args);
+                await RunAutobase(currentDirectory, logger, args);
             }
             else
             {
@@ -82,7 +82,7 @@ namespace RUNNER
                     if (cv.CompareTo(lv) < 0)
                     {
                         logger.Warning("New version of Fastre available: " + cv);
-                        logger.Warning("Install the new version using 'fsde fastre install'");
+                        logger.Warning("Install the new version using 'fade fastre install'");
                     }
                 }
 
@@ -98,71 +98,79 @@ namespace RUNNER
             }
             else
             {
-                logger.Error("Fastre is not installed. Install it using 'fsde fastre install'");
+                logger.Error("Fastre is not installed. Install it using 'fade fastre install'");
             }
         }
 
-        static async Task RunSyncEngin(string currentDirectory, Logger logger, string[] args)
+        static async Task RunAutobase(string currentDirectory, Logger logger, string[] args)
         {
-            if (Directory.Exists(currentDirectory + "\\syncengin") && File.Exists(currentDirectory + "\\syncengin\\ver.txt"))
+            if (Directory.Exists(currentDirectory + "\\autobase") && File.Exists(currentDirectory + "\\autobase\\ver.txt"))
             {
-                string fastreLatest = FetchLatestTagSync("syncengin", logger);
+                string fastreLatest = FetchLatestTagSync("autobase", logger);
                 var lv = new Version(fastreLatest);
 
                 // Check if the installed version is less than the latest version
-                string version = File.ReadAllText(currentDirectory + "\\syncengin\\ver.txt");
+                string version = File.ReadAllText(currentDirectory + "\\autobase\\ver.txt");
                 if (version == null)
                 {
-                    logger.Error("Failed to read SyncEngin version from ver.txt");
+                    logger.Error("Failed to read Autobase version from ver.txt");
                 }
                 else
                 {
                     var cv = new Version(version);
                     if (cv.CompareTo(lv) < 0)
                     {
-                        logger.Warning("New version of SyncEngin available: " + cv);
-                        logger.Warning("Install the new version using 'fsde syncengin install'");
+                        logger.Warning("New version of Autobase available: " + cv);
+                        logger.Warning("Install the new version using 'fade autobase install'");
                     }
                 }
 
                 // Get remaining arguments as string
                 string arguments = string.Join(" ", args.Skip(1));
-                int exitCode = await Cmd.SyncEnginAsync($"cd \"{currentDirectory}/syncengin\" && syncengin {arguments}");
+                int exitCode = await Cmd.AutobaseAsync($"cd \"{currentDirectory}/autobase\" && autobase {arguments}");
 
                 if (exitCode != 0)
                 {
                     Console.Write("\n");
-                    logger.Error("SyncEngin exited with code " + exitCode);
+                    logger.Error("Autobase exited with code " + exitCode);
                 }
             }
             else
             {
-                logger.Error("SyncEngin is not installed. Install it using 'fsde syncengin install'");
+                logger.Error("Autobase is not installed. Install it using 'fade autobase install'");
             }
         }
 
         static string FetchLatestTagSync(string package, Logger logger)
         {
             using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("FSDE/1.0");
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("FADE/1.0");
 
-            var response = httpClient.GetAsync($"https://api.github.com/repos/mvishok/{package}/releases/latest").Result;
-            response.EnsureSuccessStatusCode();
-
-            var json = response.Content.ReadAsStringAsync().Result;
-
-            // Parse the JSON and get the release tag
-            var jsonObj = JObject.Parse(json);
-            string? releaseTag = jsonObj["tag_name"]?.ToString();
-
-            if (!string.IsNullOrEmpty(releaseTag))
+            try
             {
-                return releaseTag;
+                var response = httpClient.GetAsync($"https://api.github.com/repos/mvishok/{package}/releases/latest").Result;
+                response.EnsureSuccessStatusCode();
+
+                var json = response.Content.ReadAsStringAsync().Result;
+
+                // Parse the JSON and get the release tag
+                var jsonObj = JObject.Parse(json);
+                string? releaseTag = jsonObj["tag_name"]?.ToString();
+
+                if (!string.IsNullOrEmpty(releaseTag))
+                {
+                    return releaseTag;
+                }
+                else
+                {
+                    logger.Error("Failed to retrieve the release tag.");
+                    return "0.0.0";
+                }
             }
-            else
+            catch (Exception e)
             {
-                logger.Error("Failed to retrieve the release tag.");
-                return "";
+                logger.Error("Failed to fetch the latest tag: " + e.Message);
+                return "0.0.0";
             }
         }
     }

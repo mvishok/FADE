@@ -1,7 +1,7 @@
 ﻿using System;
 using Spectre.Console;
 
-namespace FSDE
+namespace FADE
 {
     internal class Logger
     {

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using ShellProgressBar;
 using Newtonsoft.Json.Linq;
 
-namespace FSDE
+namespace FADE
 {
     internal class Fsde
     {
@@ -19,21 +19,21 @@ namespace FSDE
             if (args.Length == 0)
             {
                 logger.Error("No arguments provided");
-                logger.Info("To install FSDE, run 'fsde install'");
+                logger.Info("To install FADE, run 'fade install'");
                 return;
             }
 
             if (args[0] == "help")
             {
-                Console.WriteLine("Usage: fsde <command> [options]");
+                Console.WriteLine("Usage: fade <command> [options]");
                 Console.WriteLine("Commands:");
                 Console.WriteLine("help - Display this help message");
-                Console.WriteLine("install - Installs FSDE Package");
+                Console.WriteLine("install - Installs FADE Package");
             }
 
             if (args[0] == "install")
             {
-                List<string> available = new List<string> { "fastre", "syncengin" };
+                List<string> available = new List<string> { "fastre", "autobase" };
                 List<string> packages = new List<string>();
                 if (args.Length > 1)
                 {
@@ -51,9 +51,9 @@ namespace FSDE
                 else
                 {
                     packages.Add("fastre");
-                    packages.Add("syncengin");
+                    packages.Add("autobase");
                 }
-                logger.Info("FSDE will install " + packages.Count + " packages");
+                logger.Info("FADE will install " + packages.Count + " packages");
 
                 foreach (string package in packages)
                 {
@@ -215,34 +215,34 @@ namespace FSDE
 
                 logger.Success("Fastre " + fastreLatest + " installed successfully");
             }
-            else if (package == "syncengin")
+            else if (package == "autobase")
             {
 
-                //get latest version of syncengin
-                logger.Info("Fetching latest tag of SyncEngin");
-                string syncenginLatest = await FetchLatestTag("syncengin", logger);
-                var lv = new Version(syncenginLatest);
+                //get latest version of autobase
+                logger.Info("Fetching latest tag of Autobase");
+                string autobaseLatest = await FetchLatestTag("autobase", logger);
+                var lv = new Version(autobaseLatest);
 
-                //Check if syncengin is already downloaded to currentDirectory/syncengin/
-                if (Directory.Exists(currentDirectory + "\\syncengin"))
+                //Check if autobase is already downloaded to currentDirectory/autobase/
+                if (Directory.Exists(currentDirectory + "\\autobase"))
                 {
-                    if (File.Exists(currentDirectory + "\\syncengin\\syncengin.exe") && File.Exists(currentDirectory + "\\syncengin\\ver.txt"))
+                    if (File.Exists(currentDirectory + "\\autobase\\autobase.exe") && File.Exists(currentDirectory + "\\autobase\\ver.txt"))
                     {
-                        //check version of existing installation at /syncengin/ver.txt
-                        string version = File.ReadAllText(currentDirectory + "\\syncengin\\ver.txt");
+                        //check version of existing installation at /autobase/ver.txt
+                        string version = File.ReadAllText(currentDirectory + "\\autobase\\ver.txt");
                         var cv = new Version(version);
 
                         if (cv.CompareTo(lv) >= 0)
                         {
-                            logger.Info("SyncEngin " + version + " is already installed");
+                            logger.Info("Autobase " + version + " is already installed");
                             return;
                         }
                         else
                         {
-                            logger.Info("SyncEngin " + version + " is outdated");
-                            logger.Warning("SyncEngin " + version + " will be updated to " + syncenginLatest);
+                            logger.Info("Autobase " + version + " is outdated");
+                            logger.Warning("Autobase " + version + " will be updated to " + autobaseLatest);
                             logger.Warning("This operation will overwrite the existing installation.");
-                            logger.Warning("Directory to be overwritten: " + currentDirectory + "\\syncengin");
+                            logger.Warning("Directory to be overwritten: " + currentDirectory + "\\autobase");
                             logger.Warning("Do you want to continue? (y/n)");
                             string? response = Console.ReadLine();
                             if (response?.ToLower() != "y")
@@ -251,48 +251,48 @@ namespace FSDE
                                 return;
                             }
 
-                            //delete existing syncengin directory
-                            logger.Info("Deleting existing SyncEngin installation");
-                            Directory.Delete(currentDirectory + "\\syncengin", true);
+                            //delete existing autobase directory
+                            logger.Info("Deleting existing Autobase installation");
+                            Directory.Delete(currentDirectory + "\\autobase", true);
                         }
                     }
                 }
 
-                Directory.CreateDirectory(currentDirectory + "\\syncengin");
+                Directory.CreateDirectory(currentDirectory + "\\autobase");
 
                 //download
-                logger.Info("Downloading SyncEngin " + syncenginLatest);
-                string syncengin = $"https://github.com/mvishok/syncengin/releases/download/{syncenginLatest}/syncengin.exe";
-                bool downloadedSynengin = await Downloader.DownloadFileWithProgress(syncengin, currentDirectory + "\\syncengin\\syncengin.exe");
+                logger.Info("Downloading Autobase " + autobaseLatest);
+                string autobase = $"https://github.com/mvishok/autobase/releases/download/{autobaseLatest}/autobase.exe";
+                bool downloadAutobase = await Downloader.DownloadFileWithProgress(autobase, currentDirectory + "\\autobase\\autobase.exe");
 
-                if (!downloadedSynengin)
+                if (!downloadAutobase)
                 {
-                    logger.Error("Failed to download Fastre " + syncenginLatest);
+                    logger.Error("Failed to download Fastre " + autobaseLatest);
                     return;
                 }
                 else
                 {
-                    logger.Success("SyncEngin " + syncenginLatest + " downloaded successfully");
+                    logger.Success("Autobase " + autobaseLatest + " downloaded successfully");
                 }
 
                 //create ver.txt
-                File.WriteAllText(currentDirectory + "\\syncengin\\ver.txt", syncenginLatest);
+                File.WriteAllText(currentDirectory + "\\autobase\\ver.txt", autobaseLatest);
 
                 //create runner
-                logger.Info("Creating SyncEngin runner");
-                string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "runner.exe \"syncengin\" %ARGS%";
+                logger.Info("Creating Autobase runner");
+                string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "runner.exe \"autobase\" %ARGS%";
                 try
                 {
-                    File.WriteAllText(currentDirectory + "/syncengin.bat", batContent);
-                    logger.Success("SyncEngin runner created successfully");
+                    File.WriteAllText(currentDirectory + "/autobase.bat", batContent);
+                    logger.Success("Autobase runner created successfully");
                 }
                 catch (Exception ex)
                 {
-                    logger.Error("Failed to create SyncEngin runner: " + ex.Message);
+                    logger.Error("Failed to create Autobase runner: " + ex.Message);
                     return;
                 }
 
-                logger.Success("SyncEngin " + syncenginLatest + " installed successfully");
+                logger.Success("Autobase " + autobaseLatest + " installed successfully");
             }
 
             return;
@@ -301,27 +301,34 @@ namespace FSDE
         static async Task<string> FetchLatestTag(string package, Logger logger)
         {
             using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("FSDE/1.0");
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("FADE/1.0");
 
-            var response = await httpClient.GetAsync($"https://api.github.com/repos/mvishok/{package}/releases/latest");
-            response.EnsureSuccessStatusCode();
-
-            var json = await response.Content.ReadAsStringAsync();
-
-            // Parse the JSON and get the release tag
-            var jsonObj = JObject.Parse(json);
-            string? releaseTag = jsonObj["tag_name"]?.ToString();
-
-            if (!string.IsNullOrEmpty(releaseTag))
+            try
             {
-                return releaseTag;
-            }
-            else
-            {
-                logger.Error("Failed to retrieve the release tag.");
-                return "";
-            }
+                var response = await httpClient.GetAsync($"https://api.github.com/repos/mvishok/{package}/releases/latest");
+                response.EnsureSuccessStatusCode();
 
+                var json = await response.Content.ReadAsStringAsync();
+
+                // Parse the JSON and get the release tag
+                var jsonObj = JObject.Parse(json);
+                string? releaseTag = jsonObj["tag_name"]?.ToString();
+
+                if (!string.IsNullOrEmpty(releaseTag))
+                {
+                    return releaseTag;
+                }
+                else
+                {
+                    logger.Error("Failed to retrieve the release tag.");
+                    return "";
+                }
+            }
+            catch (Exception e)
+            {
+                logger.Error("Failed to fetch the latest tag: " + e.Message);
+                return "0.0.0";
+            }
         }
 
     }

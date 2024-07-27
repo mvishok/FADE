@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using ShellProgressBar;
 
-namespace FSDE
+namespace FADE
 {
     internal class Downloader
     {

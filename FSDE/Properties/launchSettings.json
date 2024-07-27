@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "FSDE": {
+    "FADE": {
       "commandName": "Project",
       "commandLineArgs": "install"
     }

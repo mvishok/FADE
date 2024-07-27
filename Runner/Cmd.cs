@@ -4,12 +4,12 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FSDE
+namespace FADE
 {
     internal class Cmd
     {
         private static List<Process> _childProcesses = new List<Process>();
-        public static async Task<int> SyncEnginAsync(string command)
+        public static async Task<int> AutobaseAsync(string command)
         {
             Process process = new Process();
             process.StartInfo.FileName = "cmd.exe";
