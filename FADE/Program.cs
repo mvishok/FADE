@@ -93,7 +93,7 @@ namespace FADE
                         logger.Success("FADE v" + fadeLatest + " downloaded successfully");
                     }
 
-                    //launch exe
+                    //launch installer
                     logger.Info("Launching FADE v" + fadeLatest);
                     Process.Start("FADEInstaller.exe");
                     logger.Success("FADE Updater launched successfully. Please continue on the launched instance.");
