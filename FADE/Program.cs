@@ -7,6 +7,9 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using ShellProgressBar;
 using Newtonsoft.Json.Linq;
+using System.IO;
+using static System.Net.WebRequestMethods;
+
 
 namespace FADE
 {
@@ -60,6 +63,43 @@ namespace FADE
                     InstallAsync(package, logger).Wait();
                 }
             }
+
+            if (args[0] == "update")
+            {
+                string fadeLatest = FetchLatestTag("fade", logger).Result;
+
+                var lv = new Version(fadeLatest);
+                var cv = new Version("0.2.0");
+
+                if (cv.CompareTo(lv) >= 0)
+                {
+                    logger.Info("FADE is up to date (v" + fadeLatest + ")");
+                }
+                else
+                {
+                    //download latest release of fade
+                    logger.Info("Downloading FADE v" + fadeLatest);
+                    string fade = $"https://github.com/mvishok/FADE/releases/download/{fadeLatest}/FADE.exe";
+                    logger.Info(fade);
+                    bool downloadedFade = Downloader.DownloadFileWithProgress(fade, "FADEInstaller.exe").Result;
+
+                    if (!downloadedFade)
+                    {
+                        logger.Error("Failed to download FADE v" + fadeLatest);
+                        return;
+                    }
+                    else
+                    {
+                        logger.Success("FADE v" + fadeLatest + " downloaded successfully");
+                    }
+
+                    //launch exe
+                    logger.Info("Launching FADE v" + fadeLatest);
+                    Process.Start("FADEInstaller.exe");
+                    logger.Success("FADE Updater launched successfully. Please continue on the launched instance.");
+                    return;
+                }
+            }
         }
 
         static async Task InstallAsync(string package, Logger logger)
@@ -104,7 +144,7 @@ namespace FADE
                     else
                     {
                         logger.Success("Node.js v22.4.1 installed successfully");
-                        File.Delete(currentDirectory + "\\node.msi");
+                        System.IO.File.Delete(currentDirectory + "\\node.msi");
                     }
                 }
 
@@ -118,9 +158,9 @@ namespace FADE
                 if (Directory.Exists(currentDirectory + "\\fastre"))
                 {
                     //load package.json if exists
-                    if (File.Exists(currentDirectory + "\\fastre\\package.json"))
+                    if (System.IO.File.Exists(currentDirectory + "\\fastre\\package.json"))
                     {
-                        var packageJson = File.ReadAllText(currentDirectory + "\\fastre\\package.json");
+                        var packageJson = System.IO.File.ReadAllText(currentDirectory + "\\fastre\\package.json");
                         var jsonObj = JObject.Parse(packageJson);
                         string? version = jsonObj["version"]?.ToString();
                         if (version == null)
@@ -178,7 +218,7 @@ namespace FADE
                     System.IO.Compression.ZipFile.ExtractToDirectory(currentDirectory + "\\fastre.zip", currentDirectory);
                     Directory.Move(currentDirectory + "\\fastre-" + fastreLatest, currentDirectory + "\\fastre");
                     logger.Success("Fastre " + fastreLatest + " extracted successfully");
-                    File.Delete(currentDirectory + "\\fastre.zip");
+                    System.IO.File.Delete(currentDirectory + "\\fastre.zip");
                 }
                 catch (Exception ex)
                 {
@@ -203,7 +243,7 @@ namespace FADE
                 string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "runner.exe \"fastre\" %ARGS%";
                 try
                 {
-                    File.WriteAllText(currentDirectory + "/fastre.bat", batContent);
+                    System.IO.File.WriteAllText(currentDirectory + "/fastre.bat", batContent);
                     logger.Success("Fastre runner created successfully");
                 }
                 catch (Exception ex)
@@ -226,10 +266,10 @@ namespace FADE
                 //Check if autobase is already downloaded to currentDirectory/autobase/
                 if (Directory.Exists(currentDirectory + "\\autobase"))
                 {
-                    if (File.Exists(currentDirectory + "\\autobase\\autobase.exe") && File.Exists(currentDirectory + "\\autobase\\ver.txt"))
+                    if (System.IO.File.Exists(currentDirectory + "\\autobase\\autobase.exe") && System.IO.File.Exists(currentDirectory + "\\autobase\\ver.txt"))
                     {
                         //check version of existing installation at /autobase/ver.txt
-                        string version = File.ReadAllText(currentDirectory + "\\autobase\\ver.txt");
+                        string version = System.IO.File.ReadAllText(currentDirectory + "\\autobase\\ver.txt");
                         var cv = new Version(version);
 
                         if (cv.CompareTo(lv) >= 0)
@@ -276,14 +316,14 @@ namespace FADE
                 }
 
                 //create ver.txt
-                File.WriteAllText(currentDirectory + "\\autobase\\ver.txt", autobaseLatest);
+                System.IO.File.WriteAllText(currentDirectory + "\\autobase\\ver.txt", autobaseLatest);
 
                 //create runner
                 logger.Info("Creating Autobase runner");
                 string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "runner.exe \"autobase\" %ARGS%";
                 try
                 {
-                    File.WriteAllText(currentDirectory + "/autobase.bat", batContent);
+                    System.IO.File.WriteAllText(currentDirectory + "/autobase.bat", batContent);
                     logger.Success("Autobase runner created successfully");
                 }
                 catch (Exception ex)

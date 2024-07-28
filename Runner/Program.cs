@@ -1,4 +1,5 @@
-﻿using FADE;
+﻿
+using FADE;
 using System;
 using System.Diagnostics;
 using Newtonsoft.Json.Linq;
@@ -18,6 +19,12 @@ namespace RUNNER
                 Cmd.KillChildProcesses(logger);
             };
 
+            var (isAvailable, Version) = CheckForUpdates(logger);
+            if (isAvailable == true)
+            {
+                logger.Warning("New version of FADE available: " + Version);
+                logger.Warning("Update FADE using 'fade update'");
+            }
 
             string? currentDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             if (currentDirectory == null)
@@ -63,6 +70,23 @@ namespace RUNNER
 
         static async Task RunFastre(string currentDirectory, Logger logger, string[] args)
         {
+            if (args.Length > 2 && args[1] == "--config")
+            {
+                //check if args[2] is either absolute or relative path. if it is relative path, convert it to absolute path with called directory
+                //get current shell working directory
+                string? cwd = Directory.GetCurrentDirectory();
+                string? configPath = args[2];
+                if (!Path.IsPathRooted(configPath))
+                {
+                    configPath = Path.GetFullPath(Path.Combine(cwd, configPath));
+                } else
+                {
+                    configPath = Path.GetFullPath(configPath);
+                }
+
+                args[2] = configPath;
+            }
+            
             if (Directory.Exists(currentDirectory + "\\fastre"))
             {
                 string fastreLatest = FetchLatestTagSync("fastre", logger);
@@ -192,6 +216,23 @@ namespace RUNNER
             {
                 logger.Error("Failed to fetch the latest tag: " + e.Message);
                 return "0.0.0";
+            }
+        }
+
+        static (bool, string) CheckForUpdates(Logger logger)
+        {
+            string fadeLatest = FetchLatestTagSync("fade", logger);
+            var lv = new Version(fadeLatest);
+
+            var cv = new Version("0.3");
+
+            if (cv.CompareTo(lv) < 0)
+            {
+                return (true, fadeLatest);
+            }
+            else
+            {
+                return (false, fadeLatest);
             }
         }
     }
