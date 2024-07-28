@@ -19,6 +19,8 @@ namespace FADE
         {
             Logger logger = new Logger();
 
+            string? currentDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
             if (args.Length == 0)
             {
                 logger.Error("No arguments provided");
@@ -60,7 +62,7 @@ namespace FADE
 
                 foreach (string package in packages)
                 {
-                    InstallAsync(package, logger).Wait();
+                    InstallAsync(package, logger, currentDirectory).Wait();
                 }
             }
 
@@ -81,7 +83,7 @@ namespace FADE
                     logger.Info("Downloading FADE v" + fadeLatest);
                     string fade = $"https://github.com/mvishok/FADE/releases/download/{fadeLatest}/FADE.exe";
                     logger.Info(fade);
-                    bool downloadedFade = Downloader.DownloadFileWithProgress(fade, "FADEInstaller.exe").Result;
+                    bool downloadedFade = Downloader.DownloadFileWithProgress(fade, currentDirectory + "\\FADEInstaller.exe").Result;
 
                     if (!downloadedFade)
                     {
@@ -95,16 +97,15 @@ namespace FADE
 
                     //launch installer
                     logger.Info("Launching FADE v" + fadeLatest);
-                    Process.Start("FADEInstaller.exe");
+                    Process.Start(currentDirectory + "\\FADEInstaller.exe");
                     logger.Success("FADE Updater launched successfully. Please continue on the launched instance.");
                     return;
                 }
             }
         }
 
-        static async Task InstallAsync(string package, Logger logger)
+        static async Task InstallAsync(string package, Logger logger, string? currentDirectory)
         {
-            string? currentDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             if (currentDirectory == null)
             {
                 logger.Error("Failed to get installantion directory");
