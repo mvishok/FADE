@@ -224,7 +224,7 @@ namespace RUNNER
             string fadeLatest = FetchLatestTagSync("fade", logger);
             var lv = new Version(fadeLatest);
 
-            var cv = new Version("0.4.0");
+            var cv = new Version("0.4.0"); // Current version of FADE
 
             if (cv.CompareTo(lv) < 0)
             {
