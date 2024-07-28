@@ -69,7 +69,7 @@ namespace FADE
                 string fadeLatest = FetchLatestTag("fade", logger).Result;
 
                 var lv = new Version(fadeLatest);
-                var cv = new Version("0.2.0");
+                var cv = new Version("0.3.0");
 
                 if (cv.CompareTo(lv) >= 0)
                 {
