@@ -121,13 +121,37 @@ namespace FADE
                 if (nodeExists.ExitCode != 0)
                 {
                     logger.Info("Node not installed");
-                    logger.Info("Downloading Node.js v22.4.1");
-                    string node = $"https://nodejs.org/dist/latest/node-v22.4.1-{(Environment.Is64BitOperatingSystem ? "x64" : "x86")}.msi";
+
+                    logger.Info("Fetching latest version of Node.js");
+                    string? latestNode;
+                    using var httpClient = new HttpClient();
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("FADE/1.0");
+                    try
+                    {
+                        var response = await httpClient.GetAsync("https://nodejs.org/download/release/index.json");
+                        response.EnsureSuccessStatusCode();
+
+                        var json = await response.Content.ReadAsStringAsync();
+                        var jsonObj = JArray.Parse(json);
+                        latestNode = jsonObj[0]["version"]?.ToString();
+
+                    } catch (Exception e)
+                    {
+                        logger.Error("Failed to fetch the latest version of Node.js: " + e.Message);
+                        return;
+                    }
+
+
+                    logger.Info("Downloading Node.js "+ latestNode);
+
+                    string node = $"https://nodejs.org/download/release/{latestNode}/node-{latestNode}-{(Environment.Is64BitOperatingSystem ? "x64" : "x86")}.msi";
+                    logger.Info(node);
                     bool downloaded = await Downloader.DownloadFileWithProgress(node, currentDirectory + "\\node.msi");
 
                     if (!downloaded)
                     {
                         logger.Error("Failed to download Node.js v22.4.1");
+                        Environment.Exit(1);
                         return;
                     }
                     else

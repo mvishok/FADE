@@ -2,7 +2,7 @@
   "profiles": {
     "FADE": {
       "commandName": "Project",
-      "commandLineArgs": "update"
+      "commandLineArgs": "install"
     }
   }
 }
