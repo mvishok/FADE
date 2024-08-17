@@ -2,7 +2,7 @@
   "profiles": {
     "Runner": {
       "commandName": "Project",
-      "commandLineArgs": "\"autobase\" config.json"
+      "commandLineArgs": "\"fastre\" update mvishok/tests"
     }
   }
 }

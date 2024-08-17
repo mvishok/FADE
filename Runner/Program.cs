@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
+using Runner;
 
 namespace RUNNER
 {
@@ -70,22 +71,6 @@ namespace RUNNER
 
         static async Task RunFastre(string currentDirectory, Logger logger, string[] args)
         {
-            if (args.Length > 2 && args[1] == "--config")
-            {
-                //check if args[2] is either absolute or relative path. if it is relative path, convert it to absolute path with called directory
-                //get current shell working directory
-                string? cwd = Directory.GetCurrentDirectory();
-                string? configPath = args[2];
-                if (!Path.IsPathRooted(configPath))
-                {
-                    configPath = Path.GetFullPath(Path.Combine(cwd, configPath));
-                } else
-                {
-                    configPath = Path.GetFullPath(configPath);
-                }
-
-                args[2] = configPath;
-            }
             
             if (Directory.Exists(currentDirectory + "\\fastre"))
             {
@@ -110,14 +95,32 @@ namespace RUNNER
                     }
                 }
 
-                // Get remaining arguments as string
-                string arguments = string.Join(" ", args.Skip(1));
-                int exitCode = await Cmd.FastreAsync($"cd \"{currentDirectory}/fastre\" && node fastre.js {arguments}");
+                // Process args
+                FastreArgs Args = new FastreArgs();
+                args = await Args.Proc(args, currentDirectory + "\\fastre", logger);
 
-                if (exitCode != 0)
+                // Get remaining arguments as string and start Fastre
+                if (args[0] == "exit")
                 {
-                    Console.Write("\n");
-                    logger.Error("Fastre exited with code " + exitCode);
+                    return;
+                } 
+                
+                else if (args[0] == "run")
+                {
+                    string arguments = string.Join(" ", args.Skip(1));
+                    int exitCode = await Cmd.FastreAsync($"cd \"{currentDirectory}/fastre\" && node fastre.js {arguments}");
+
+                    if (exitCode != 0)
+                    {
+                        Console.Write("\n");
+                        logger.Error("Fastre exited with code " + exitCode);
+                    }
+
+                } 
+                
+                else
+                {
+                    logger.Error("Failed to process Fastre arguments.");
                 }
             }
             else
