@@ -1,8 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
-using ShellProgressBar;
+﻿using ShellProgressBar;
 
 namespace FADE
 {
@@ -37,7 +33,7 @@ namespace FADE
                         {
                             await fileStream.WriteAsync(buffer, 0, bytesRead);
                             downloadedBytes += bytesRead;
-                            progress.Tick($"Downloaded: {FormatBytes(downloadedBytes)} / {FormatBytes(totalBytes)}" + " " + (int)Math.Floor(((double)downloadedBytes / totalBytes)*100) + "%");
+                            progress.Tick($"Downloaded: {FormatBytes(downloadedBytes)} / {FormatBytes(totalBytes)}" + " " + (int)Math.Floor(((double)downloadedBytes / totalBytes) * 100) + "%");
                         }
                     }
                 }

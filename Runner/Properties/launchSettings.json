@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Runner": {
-      "commandName": "Project",
-      "commandLineArgs": "\"fastre\" update mvishok/tests"
-    }
-  }
-}

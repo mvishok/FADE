@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
 namespace FADE
 {
@@ -24,6 +19,7 @@ namespace FADE
 
             return process;
         }
+
         public static Process admin(string command, Logger logger)
         {
             try
@@ -43,7 +39,7 @@ namespace FADE
                 logger.Error("Error running command as administrator: " + ex.Message);
                 Environment.Exit(1);
                 return null;
-                
+
             }
         }
     }

@@ -2,7 +2,7 @@
   "profiles": {
     "FADE": {
       "commandName": "Project",
-      "commandLineArgs": "install"
+      "commandLineArgs": "install fastre\r\n"
     }
   }
 }
