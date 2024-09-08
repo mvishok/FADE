@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 public class Program
 {
-    string fadeVersion = "0.1.0";
+    string fadeVersion = "1.1.0";
     FADE.Logger logger = new FADE.Logger();
     string? exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
     // this is the entry point of your application
