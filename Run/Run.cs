@@ -3,13 +3,15 @@ using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using FADE;
+using System.Runtime.ConstrainedExecution;
+using System;
 
 public class Runner
 {
     Logger logger = new Logger();
     string? exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
     string? fastrePath;
-    
+
     static int Main(string[] args)
     {
         Console.CancelKeyPress += (sender, e) =>
@@ -25,7 +27,7 @@ public class Runner
     public async Task<Task> fastre(string arg)
     {
         //Check if fastre is installed
-        Process installed = Cmd.cmd("fastre -v");
+        Process installed = Cmd.cmd("which fastre");
         if (installed.ExitCode != 0)
         {
             logger.Info("fastre is not installed");
@@ -35,26 +37,36 @@ public class Runner
         else
         {
             String fastreP = Cmd.cmdString("which fastre");
-
-            if (fastreP.StartsWith("ERROR:"))
-            {
-                logger.Error("An error while trying to locate fastre");
-                logger.Error(fastreP);
-                return Task.CompletedTask;
-            }
-            else
-            {
-                fastrePath = fastreP.Replace("/", "\\").Substring(1).Insert(1, ":").Trim();
-                fastrePath = string.Join("\\", fastrePath.Split('\\').Take(fastrePath.Split('\\').Length - 1)) + "\\node_modules\\fastre";
-            }
+            fastrePath = fastreP.Replace("/", "\\").Substring(1).Insert(1, ":").Trim();
+            fastrePath = string.Join("\\", fastrePath.Split('\\').Take(fastrePath.Split('\\').Length - 1)) + "\\node_modules\\fastre";    
         }
 
-        string[] args = arg.Split(' ');
+        //check for updates to fastre silently from fastrePath/package.json
+        string pkgJson = File.ReadAllText(fastrePath + "\\package.json");
+        dynamic pkg = JsonConvert.DeserializeObject(pkgJson) ?? new JObject();
+        Version cv = new Version(pkg["version"].ToString());
+        Version lv = new Version(await FetchLatestTag("mvishok", "fastre", logger));
+        if (lv > cv)
+        {
+            logger.Warning("A new version of fastre is available. Run 'fade update fastre' to update.\n");
+        }
+
+        string[]? args = arg.Split(' ');
 
         switch (args[0])
         {
             case "add":
                 if (await AddFastrePackageAsync(args)) return Task.CompletedTask;
+                else Environment.Exit(1);
+                break;
+
+            case "update":
+                if (await UpdateFastrePackageAsync(args)) return Task.CompletedTask;
+                else Environment.Exit(1);
+                break;
+
+            case "remove":
+                if (RemoveFastePackage(args)) return Task.CompletedTask;
                 else Environment.Exit(1);
                 break;
 
@@ -72,6 +84,43 @@ public class Runner
                 break;
         }
 
+        return Task.CompletedTask;
+    }
+
+    public async Task<Task> autobase(string arg)
+    {
+        //Check if autobase is installed in exeDir/autobase
+        if (!Directory.Exists(exeDir + "\\autobase") || !File.Exists(exeDir + "\\autobase\\autobase.exe"))
+        {
+            logger.Info("autobase is not installed");
+            logger.Info("Install autobase by running 'fade install autobase'");
+            return Task.CompletedTask;
+        }
+
+        if (!File.Exists(exeDir + "\\autobase\\ver.txt")){ 
+            logger.Error("Version file not found. Assuming 0.0.0");
+            System.IO.File.WriteAllText(exeDir + "\\autobase\\ver.txt", "0.0.0");
+        }
+
+        // Check for updates to autobase silently from exeDir/autobase/ver.txt
+        Version cv = new Version(System.IO.File.ReadAllText(exeDir + "\\autobase\\ver.txt"));
+        Version lv = new Version(await FetchLatestTag("mvishok", "autobase", logger));
+        if (lv > cv)
+        {
+            logger.Warning("A new version of autobase is available. Run 'fade update autobase' to update.\n");
+        }
+
+        //delete one hpyhen '-' if there are three hyphens consecutively in arg string
+        arg = arg.Replace("$", "--");
+
+        //start "exeDir/autobase/autobase.exe" with the arguments
+        int exitCode = await Cmd.cmdRun("cd " + exeDir + "\\autobase && autobase.exe " + arg);
+
+        if (exitCode != 0)
+        {
+            Console.Write("\n");
+            logger.Error("Autobase exited with code " + exitCode);
+        }
 
         return Task.CompletedTask;
     }
@@ -206,7 +255,212 @@ public class Runner
         return true;
     }
 
-    static async Task<string> FetchLatestTag(string author, string package, Logger logger)
+    private async Task<bool> UpdateFastrePackageAsync(String[] args)
+    {
+        if (args.Length < 2)
+        {
+            logger.Error("Invalid number of arguments");
+            return false;
+        }
+
+        string[] repo = args[1].Split('/');
+        if (repo.Length != 2)
+        {
+            logger.Error("Invalid repo name. Use 'username/repo'");
+            return false;
+        }
+
+        // check if packages folder exists
+        if (!Directory.Exists(fastrePath + "\\packages"))
+        {
+            logger.Error("Packages folder not found. Exiting.");
+            return false;
+        }
+
+        // check if packages.json exists
+        if (!File.Exists(fastrePath + "\\packages\\packages.json"))
+        {
+            logger.Error("packages.json not found. Exiting.");
+            return false;
+        }
+
+        //read packages.json
+        logger.Info("Reading packages.json");
+        string packagesJson = File.ReadAllText(fastrePath + "\\packages\\packages.json");
+        dynamic json = JsonConvert.DeserializeObject(packagesJson) ?? new JObject();
+
+        //read pkg.json of package (dir / username / repo / pkg.json)
+        var version = new Version();
+        String ver;
+        if (!Directory.Exists(fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1]))
+        {
+            logger.Error("Package not found. Exiting.");
+            return false;
+        }
+        else
+        {
+            string pkgJson = File.ReadAllText(fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1] + "\\pkg.json");
+            dynamic pkg = JsonConvert.DeserializeObject(pkgJson) ?? new JObject();
+            ver = pkg["version"].ToString();
+            version = new Version(ver);
+        }
+
+        // fetch latest tag and compare with current version
+        logger.Info("Fetching the latest tag for " + repo[0] + "/" + repo[1]);
+        string latestTag = await FetchLatestTag(repo[0], repo[1], logger);
+        if (latestTag == "")
+        {
+            logger.Error("Failed to fetch the latest tag. Exiting.");
+            return false;
+        }
+
+        var latestVersion = new Version(latestTag);
+        if (latestVersion <= version)
+        {
+            logger.Info("Package is already up to date.");
+            return true;
+        }
+
+        // delete the package folder
+        logger.Info("Deleting the package folder");
+        try
+        {
+            Directory.Delete(fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1], true);
+        }
+        catch (Exception e)
+        {
+            logger.Error("Failed to delete the package folder: " + e.Message);
+            return false;
+        }
+
+        // download the package from github
+        string github = $"https://github.com/{repo[0]}/{repo[1]}/archive/refs/tags/{latestTag}.zip";
+        logger.Info("Downloading package from " + github);
+        bool downloadPakcage = await Downloader.DownloadFileWithProgress(github, fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1] + ".zip");
+
+        if (!downloadPakcage)
+        {
+            logger.Error("Failed to download the package. Exiting.");
+            return false;
+        }
+
+        //extract the package
+        logger.Info("Extracting package");
+        try
+        {
+            System.IO.Compression.ZipFile.ExtractToDirectory(fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1] + ".zip", fastrePath + "\\packages\\" + repo[0] + "\\");
+        }
+        catch (Exception e)
+        {
+            logger.Error("Failed to extract the package: " + e.Message);
+            return false;
+        }
+
+        // Rename package-tag to package
+        logger.Info("Renaming package folder");
+        Directory.Move(fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1] + "-" + latestTag, fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1]);
+
+        // Remove the zip file
+        logger.Info("Cleaning up");
+        File.Delete(fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1] + ".zip");
+
+        // update the version in packages.json
+        logger.Info("Updating version in packages.json");
+        string oldname = repo[1] + "@" + ver;
+        string newname = repo[1] + "@" + latestTag;
+        string p = json[oldname];
+        json.Remove(oldname);
+        json[newname] = p;
+
+        string updatedPackagesJson = JsonConvert.SerializeObject(json, Formatting.Indented);
+        File.WriteAllText(fastrePath + "\\packages\\packages.json", updatedPackagesJson);
+
+        // success
+        logger.Success("Package " + repo[1].Split('@')[0] + " updated successfully.");
+        return true;
+    }
+
+    private bool RemoveFastePackage(String[] args)
+    {
+        if (args.Length < 2)
+        {
+            logger.Error("Invalid number of arguments");
+            return false;
+        }
+
+        string[] repo = args[1].Split('/');
+        if (repo.Length != 2)
+        {
+            logger.Error("Invalid repo name. Use 'username/repo'");
+            return false;
+        }
+
+        // check if packages folder exists
+        if (!Directory.Exists(fastrePath + "\\packages"))
+        {
+            logger.Error("Packages folder not found. Exiting.");
+            return false;
+        }
+
+        // check if packages.json exists
+        if (!File.Exists(fastrePath + "\\packages\\packages.json"))
+        {
+            logger.Error("packages.json not found. Exiting.");
+            return false;
+        }
+
+        //read packages.json
+        logger.Info("Reading packages.json");
+        string packagesJson = File.ReadAllText(fastrePath + "\\packages\\packages.json");
+        dynamic json = JsonConvert.DeserializeObject(packagesJson) ?? new JObject();
+
+        // check if username folder exists
+        if (!Directory.Exists(fastrePath + "\\packages\\" + repo[0]))
+        {
+            logger.Error("Package not found. Exiting.");
+            return false;
+        }
+
+        string ver;
+
+        // check if repo folder exists
+        if (!Directory.Exists(fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1]))
+        {
+            logger.Error("Package not found. Exiting.");
+            return false;
+        }
+        else
+        {
+            string pkgJson = File.ReadAllText(fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1] + "\\pkg.json");
+            dynamic pkg = JsonConvert.DeserializeObject(pkgJson) ?? new JObject();
+            ver = pkg["version"].ToString();
+        }
+
+        // delete the package folder
+        logger.Info("Deleting the package folder");
+        try
+        {
+            Directory.Delete(fastrePath + "\\packages\\" + repo[0] + "\\" + repo[1], true);
+        }
+        catch (Exception e)
+        {
+            logger.Error("Failed to delete the package folder: " + e.Message);
+            return false;
+        }
+
+        // remove the package from packages.json
+        logger.Info("Removing package from packages.json");
+        string pname = repo[1] + "@" + ver;
+        json.Remove(pname);
+        string updatedPackagesJson = JsonConvert.SerializeObject(json, Formatting.Indented);
+        File.WriteAllText(fastrePath + "\\packages\\packages.json", updatedPackagesJson);
+
+        // success
+        logger.Success("Package " + repo[1] + " removed successfully.");
+        return true;
+    }
+
+    private static async Task<string> FetchLatestTag(string author, string package, Logger logger)
     {
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("FADE/1.0");

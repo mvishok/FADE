@@ -2,7 +2,7 @@
   "profiles": {
     "FADE": {
       "commandName": "Project",
-      "commandLineArgs": "install fastre\r\n"
+      "commandLineArgs": "install autobase\r\n"
     }
   }
 }

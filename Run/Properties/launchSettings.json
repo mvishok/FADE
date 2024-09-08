@@ -2,7 +2,7 @@
   "profiles": {
     "Run": {
       "commandName": "Project",
-      "commandLineArgs": "fastre \"$config C:\\Users\\mvish\\Desktop\\fas\\config.json\""
+      "commandLineArgs": "autobase \"config hi.json\""
     }
   }
 }
