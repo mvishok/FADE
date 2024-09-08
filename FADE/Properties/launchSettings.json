@@ -2,7 +2,7 @@
   "profiles": {
     "FADE": {
       "commandName": "Project",
-      "commandLineArgs": "update autobase\r\n"
+      "commandLineArgs": "update\r\n"
     }
   }
 }

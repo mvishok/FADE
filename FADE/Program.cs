@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 
 public class Program
 {
+    string fadeVersion = "0.1.0";
     FADE.Logger logger = new FADE.Logger();
     string? exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
     // this is the entry point of your application
@@ -200,9 +201,68 @@ public class Program
         }
     }
 
-    public async Task update(string package)
+    //Update command
+    public async Task update(string? package)
     {
-        if (package == "fastre")
+        //if no package given update FADE alone
+        if (package == null)
+        {
+
+            logger.Info("Fetching latest tag of FADE");
+            string fadeLatest = await FetchLatestTag("fade", logger);
+
+            //get current version of fade
+            var cv = new Version(fadeVersion);
+            var lv = new Version(fadeLatest);
+
+            if (cv.CompareTo(lv) >= 0)
+            {
+                logger.Info("FADE is already up to date at version " + fadeVersion);
+                return;
+            }
+            
+            //download fade
+            logger.Info("Downloading FADE " + fadeLatest);
+            string fade = $"https://github.com/mvishok/fade/releases/download/{fadeLatest}/fade.exe";
+            bool downloaded = await Downloader.DownloadFileWithProgress(fade, exeDir + "\\update.exe");
+
+            if (!downloaded)
+            {
+                logger.Error("Failed to download FADE " + fadeLatest);
+                return;
+            }
+            else
+            {
+                logger.Success("FADE " + fadeLatest + " downloaded successfully");
+            }
+
+            //start "update.exe /VERYSILENT"
+            logger.Info("Installing FADE " + fadeLatest);
+            Process fadeProcess = Cmd.admin($"\"{exeDir}\\update.exe\" /VERYSILENT", logger);
+            if (fadeProcess.ExitCode != 0)
+            {
+                logger.Error("Failed to install FADE " + fadeLatest);
+                logger.Error("Installer exit code: " + fadeProcess.ExitCode);
+                logger.Info("Please try running the installer manually");
+                logger.Info("The installer is located at " + exeDir + "\\update.exe");
+                return;
+            }
+            else
+            {
+                logger.Info("Cleaning up");
+                try
+                {
+                    File.Delete(exeDir + "\\update.exe");
+                }
+                catch (Exception e)
+                {
+                    logger.Error("Failed to clean up: " + e.Message);
+                }
+
+                logger.Success("FADE " + fadeLatest + " installed successfully");
+            }
+        }
+        else if (package == "fastre")
         {
             string fastrePath;
             //Check if fastre is installed
@@ -299,6 +359,7 @@ public class Program
             logger.Error("Unknown package: " + package);
         }
     }
+
     private async Task<string> FetchLatestTag(string package, Logger logger)
     {
         using var httpClient = new HttpClient();
