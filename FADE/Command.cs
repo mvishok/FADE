@@ -20,6 +20,30 @@ namespace FADE
             return process;
         }
 
+        public static String cmdString(string command)
+        {
+            Process process = new Process();
+            process.StartInfo.FileName = "cmd.exe";
+            process.StartInfo.Arguments = "/c " + command;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.CreateNoWindow = true;
+            process.Start();
+
+            string output = process.StandardOutput.ReadToEnd();
+
+            if (process.ExitCode != 0)
+            {
+                return "ERROR:" + process.StandardError.ReadToEnd();
+            }
+            else
+            {
+                return output;
+            }
+        }
+
+
         public static Process admin(string command, Logger logger)
         {
             try

@@ -2,6 +2,7 @@
 using FADE;
 using System.Diagnostics;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 public class Program
 {
@@ -101,7 +102,7 @@ public class Program
 
             //create runner
             logger.Info("Creating FASTRE runner");
-            string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "Run.exe \"fastre %ARGS%\"";
+            string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "Run.exe fastre \"%ARGS%\"";
             try
             {
                 System.IO.File.WriteAllText(exeDir + "\\fastre.bat", batContent);
@@ -156,7 +157,7 @@ public class Program
                     }
                 }
             }
-            
+
             Directory.CreateDirectory(exeDir + "\\autobase");
 
             //download
@@ -179,7 +180,7 @@ public class Program
 
             //create runner
             logger.Info("Creating Autobase runner");
-            string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "Run.exe \"autobase\" %ARGS%";
+            string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "Run.exe autobase \"%ARGS%\"";
             try
             {
                 System.IO.File.WriteAllText(exeDir + "/autobase.bat", batContent);
@@ -201,7 +202,102 @@ public class Program
 
     public async Task update(string package)
     {
+        if (package == "fastre")
+        {
+            string fastrePath;
+            //Check if fastre is installed
+            Process installed = Cmd.cmd("which fastre");
+            if (installed.ExitCode != 0)
+            {
+                logger.Info("fastre is not installed");
+                logger.Info("Install fastre by running 'fastre install fastre'");
+                return;
+            }
+            else
+            {
+                String fastreP = Cmd.cmdString("which fastre");
+                fastrePath = fastreP.Replace("/", "\\").Substring(1).Insert(1, ":").Trim();
+                fastrePath = string.Join("\\", fastrePath.Split('\\').Take(fastrePath.Split('\\').Length - 1)) + "\\node_modules\\fastre";
+            }
 
+            //get current version of fastre
+            string pkgJson = File.ReadAllText(fastrePath + "\\package.json");
+            dynamic pkg = JsonConvert.DeserializeObject(pkgJson) ?? new JObject();
+            Version cv = new Version(pkg["version"].ToString());
+
+            //get latest version of fastre
+            logger.Info("Fetching latest tag of Fastre");
+            string fastreLatest = await FetchLatestTag("fastre", logger);
+            Version lv = new Version(fastreLatest);
+
+            if (cv.CompareTo(lv) >= 0)
+            {
+                logger.Info("Fastre is already up to date at version " + pkg["version"]);
+                return;
+            }
+            else
+            {
+                //install fastre with npm globally
+                logger.Info("Updating Fastre");
+                Process fastre = Cmd.cmd("npm install -g fastre");
+                if (fastre.ExitCode != 0)
+                {
+                    logger.Error("Failed to update Fastre");
+                    return;
+                }
+                else
+                {
+                    logger.Success("Fastre updated successfully");
+                }
+            }
+        }
+        else if (package == "autobase")
+        {
+            // Check if Autobase is installed
+            if (!Directory.Exists(exeDir + "\\autobase") || !System.IO.File.Exists(exeDir + "\\autobase\\autobase.exe"))
+            {
+                logger.Info("Autobase is not installed");
+                logger.Info("Install Autobase by running 'fastre install autobase'");
+                return;
+            }
+
+            //get current version of autobase
+            if (!System.IO.File.Exists(exeDir + "\\autobase\\ver.txt"))
+            {
+                logger.Error("Failed to read the version of Autobase. Assuming version 0.0.0");
+                System.IO.File.WriteAllText(exeDir + "\\autobase\\ver.txt", "0.0.0");
+            }
+
+            string ver = System.IO.File.ReadAllText(exeDir + "\\autobase\\ver.txt");
+            Version cv = new Version(ver);
+
+            //get latest version of autobase
+            logger.Info("Fetching latest tag of Autobase");
+            string autobaseLatest = await FetchLatestTag("autobase", logger);
+            Version lv = new Version(autobaseLatest);
+
+            if (cv.CompareTo(lv) >= 0)
+            {
+                logger.Info("Autobase is already up to date at version " + ver);
+                return;
+            }
+            else
+            {
+                // delete existing autobase installation
+                logger.Info("Deleting existing Autobase installation");
+                Directory.Delete(exeDir + "\\autobase", true);
+
+                // install autobase
+                logger.Info("Installing Autobase");
+                install("autobase").Wait();
+
+                logger.Success("Autobase updated successfully");
+            }
+        }
+        else
+        {
+            logger.Error("Unknown package: " + package);
+        }
     }
     private async Task<string> FetchLatestTag(string package, Logger logger)
     {
