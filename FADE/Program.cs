@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 public class Program
 {
-    string fadeVersion = "1.1.0";
+    string fadeVersion = "1.2.0";
     FADE.Logger logger = new FADE.Logger();
     string? exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
     // this is the entry point of your application
@@ -195,6 +195,84 @@ public class Program
 
             logger.Success("Autobase " + autobaseLatest + " installed successfully");
         }
+        else if (package == "minter")
+        {
+            //get latest version of minter
+            logger.Info("Fetching latest tag of Minter");
+            string minterLatest = await FetchLatestTag("minter", logger);
+            var lv = new Version(minterLatest);
+            
+            if (Directory.Exists(exeDir + "\\minter"))
+            {
+                if (System.IO.File.Exists(exeDir + "\\minter\\minter.exe") && System.IO.File.Exists(exeDir + "\\minter\\ver.txt"))
+                {
+                    //check version of existing installation at /minter/ver.txt
+                    string version = System.IO.File.ReadAllText(exeDir + "\\minter\\ver.txt");
+                    var cv = new Version(version);
+
+                    if (cv.CompareTo(lv) >= 0)
+                    {
+                        logger.Info("Minter " + version + " is already installed");
+                        return;
+                    }
+                    else
+                    {
+                        logger.Info("Minter " + version + " is outdated");
+                        logger.Warning("Minter " + version + " will be updated to " + minterLatest);
+                        logger.Warning("This operation will overwrite the existing installation.");
+                        logger.Warning("Directory to be overwritten: " + exeDir + "\\minter");
+                        logger.Warning("Do you want to continue? (y/n)");
+                        string? response = Console.ReadLine();
+                        if (response?.ToLower() != "y")
+                        {
+                            logger.Info("Installation aborted");
+                            return;
+                        }
+
+                        //delete existing minter directory
+                        logger.Info("Deleting existing Minter installation");
+                        Directory.Delete(exeDir + "\\minter", true);
+                    }
+                }
+            }
+            
+            Directory.CreateDirectory(exeDir + "\\minter");
+
+            //download
+            logger.Info("Downloading Minter " + minterLatest);
+            string minter = $"https://github.com/mvishok/minter/releases/download/{minterLatest}/minter.exe";
+
+            bool downloadMinter = await Downloader.DownloadFileWithProgress(minter, exeDir + "\\minter\\minter.exe");
+
+            if (!downloadMinter)
+            {
+                logger.Error("Failed to download Minter " + minterLatest);
+                return;
+            }
+            else
+            {
+                logger.Success("Minter " + minterLatest + " downloaded successfully");
+            }
+
+            //create ver.txt
+            System.IO.File.WriteAllText(exeDir + "\\minter\\ver.txt", minterLatest);
+
+            //create runner
+            logger.Info("Creating Minter runner");
+            string batContent = "@echo off" + Environment.NewLine + "set ARGS=%*" + Environment.NewLine + "Run.exe minter \"%ARGS%\"";
+            try
+            {
+                System.IO.File.WriteAllText(exeDir + "/minter.bat", batContent);
+                logger.Success("Minter runner created successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Failed to create Minter runner: " + ex.Message);
+                return;
+            }
+
+            logger.Success("Minter " + minterLatest + " installed successfully");
+        }
         else
         {
             logger.Error("Unknown package: " + package);
@@ -352,6 +430,49 @@ public class Program
                 install("autobase").Wait();
 
                 logger.Success("Autobase updated successfully");
+            }
+        }
+        else if (package == "minter")
+        {
+            // Check if Minter is installed
+            if (!Directory.Exists(exeDir + "\\minter") || !System.IO.File.Exists(exeDir + "\\minter\\minter.exe"))
+            {
+                logger.Info("Minter is not installed");
+                logger.Info("Install Minter by running 'fastre install minter'");
+                return;
+            }
+
+            //get current version of minter
+            if (!System.IO.File.Exists(exeDir + "\\minter\\ver.txt"))
+            {
+                logger.Error("Failed to read the version of Minter. Assuming version 0.0.0");
+                System.IO.File.WriteAllText(exeDir + "\\minter\\ver.txt", "0.0.0");
+            }
+
+            string ver = System.IO.File.ReadAllText(exeDir + "\\minter\\ver.txt");
+            Version cv = new Version(ver);
+
+            //get latest version of minter
+            logger.Info("Fetching latest tag of Minter");
+            string minterLatest = await FetchLatestTag("minter", logger);
+            Version lv = new Version(minterLatest);
+
+            if (cv.CompareTo(lv) >= 0)
+            {
+                logger.Info("Minter is already up to date at version " + ver);
+                return;
+            }
+            else
+            {
+                // delete existing minter installation
+                logger.Info("Deleting existing Minter installation");
+                Directory.Delete(exeDir + "\\minter", true);
+
+                // install minter
+                logger.Info("Installing Minter");
+                install("minter").Wait();
+
+                logger.Success("Minter updated successfully");
             }
         }
         else

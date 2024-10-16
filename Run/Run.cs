@@ -125,6 +125,66 @@ public class Runner
         return Task.CompletedTask;
     }
 
+    public async Task<Task> minter(string? arg)
+    {
+        //Check if minter is installed in exeDir/minter
+        if (!Directory.Exists(exeDir + "\\minter") || !File.Exists(exeDir + "\\minter\\minter.exe"))
+        {
+            logger.Info("minter is not installed");
+            logger.Info("Install minter by running 'fade install minter'");
+            return Task.CompletedTask;
+        }
+
+        if (!File.Exists(exeDir + "\\minter\\ver.txt")){ 
+            logger.Error("Version file not found. Assuming 0.0.0");
+            System.IO.File.WriteAllText(exeDir + "\\minter\\ver.txt", "0.0.0");
+        }
+
+        // Check for updates to minter silently from exeDir/minter/ver.txt
+        Version cv = new Version(System.IO.File.ReadAllText(exeDir + "\\minter\\ver.txt"));
+        Version lv = new Version(await FetchLatestTag("mvishok", "minter", logger));
+        if (lv > cv)
+        {
+            logger.Warning("A new version of minter is available. Run 'fade update minter' to update.\n");
+        }
+
+        if (arg == null || arg == "")
+        {
+
+            Process process = new Process();
+            process.StartInfo.FileName = "cmd.exe";
+            process.StartInfo.Arguments = "/c start " + exeDir + "\\minter\\minter.exe";
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.CreateNoWindow = true;
+            process.Start();
+            return Task.CompletedTask;
+        }
+
+        //split the arg string by space
+        string[] args = arg.Split(' ');
+
+        if (args.Length > 1)
+        {
+            //the first argument is the path to the file. convert it to absolute path if it is relative to the caller's directory
+            if (!Path.IsPathRooted(args[1]))
+            {
+                args[1] = Path.GetFullPath(args[1]);
+            }
+        }
+
+        arg = string.Join(" ", args);
+
+        //start "exeDir/minter/minter.exe" with the arguments
+        int exitCode = await Cmd.cmdRun("cd " + exeDir + "\\minter && minter.exe " + arg);
+        if (exitCode != 0) {
+            Console.Write("\n");
+            logger.Error("Minter exited with code " + exitCode);
+        }
+        return Task.CompletedTask;
+    }
+
     private async Task<bool> AddFastrePackageAsync(String[] args)
     {
 
