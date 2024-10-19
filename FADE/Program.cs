@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 public class Program
 {
-    string fadeVersion = "1.2.0";
+    string fadeVersion = "1.2.1";
     FADE.Logger logger = new FADE.Logger();
     string? exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
     // this is the entry point of your application
@@ -197,6 +197,50 @@ public class Program
         }
         else if (package == "minter")
         {
+            //check if jdk 23 is installed
+            Process jdkExists = Cmd.cmd("java -version");
+
+            if (jdkExists.ExitCode != 0)
+            {
+                
+                //install jdk 23
+                logger.Info("JDK 23 is not installed");
+
+                logger.Info("Downloading jdk23");
+                string jdk = "https://download.java.net/java/GA/jdk23.0.1/c28985cbf10d4e648e4004050f8781aa/11/GPL/openjdk-23.0.1_windows-x64_bin.zip";
+                bool downloaded = await Downloader.DownloadFileWithProgress(jdk, exeDir + "\\jdk23.zip");
+                if (downloaded) {
+                    logger.Success("JDK 23 downloaded successfully");
+                } else {
+                    logger.Error("Failed to download JDK 23");
+                    return;
+                }
+
+                logger.Info("Extracting JDK 23");
+                Process unzip = Cmd.cmd($"powershell -command \"Expand-Archive -Path '{exeDir}\\jdk23.zip' -DestinationPath '{exeDir}\\jdk23'\"");
+                if (unzip.ExitCode != 0)
+                {
+                    logger.Error("Failed to extract JDK 23");
+                    return;
+                }
+                else
+                {
+                    logger.Success("JDK 23 extracted successfully");
+                }
+
+                //set JAVA_HOME and add to PATH
+                string jdkPath = exeDir + "\\jdk23\\jdk-23.0.1";
+                Environment.SetEnvironmentVariable("JAVA_HOME", jdkPath, EnvironmentVariableTarget.Machine);
+                Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + ";" + jdkPath + "\\bin", EnvironmentVariableTarget.Machine);
+                
+                //delete jdk23.zip
+                logger.Info("Cleaning up");
+                File.Delete(exeDir + "\\jdk23.zip");
+
+                logger.Success("JDK 23 installed successfully");
+               
+            }
+
             //get latest version of minter
             logger.Info("Fetching latest tag of Minter");
             string minterLatest = await FetchLatestTag("minter", logger);
@@ -204,7 +248,7 @@ public class Program
             
             if (Directory.Exists(exeDir + "\\minter"))
             {
-                if (System.IO.File.Exists(exeDir + "\\minter\\minter.exe") && System.IO.File.Exists(exeDir + "\\minter\\ver.txt"))
+                if (System.IO.File.Exists(exeDir + "\\minter\\minter.jar") && System.IO.File.Exists(exeDir + "\\minter\\ver.txt"))
                 {
                     //check version of existing installation at /minter/ver.txt
                     string version = System.IO.File.ReadAllText(exeDir + "\\minter\\ver.txt");
@@ -240,9 +284,9 @@ public class Program
 
             //download
             logger.Info("Downloading Minter " + minterLatest);
-            string minter = $"https://github.com/mvishok/minter/releases/download/{minterLatest}/minter.exe";
+            string minter = $"https://github.com/mvishok/minter/releases/download/{minterLatest}/minter.jar";
 
-            bool downloadMinter = await Downloader.DownloadFileWithProgress(minter, exeDir + "\\minter\\minter.exe");
+            bool downloadMinter = await Downloader.DownloadFileWithProgress(minter, exeDir + "\\minter\\minter.jar");
 
             if (!downloadMinter)
             {
@@ -435,7 +479,7 @@ public class Program
         else if (package == "minter")
         {
             // Check if Minter is installed
-            if (!Directory.Exists(exeDir + "\\minter") || !System.IO.File.Exists(exeDir + "\\minter\\minter.exe"))
+            if (!Directory.Exists(exeDir + "\\minter") || !System.IO.File.Exists(exeDir + "\\minter\\minter.jar"))
             {
                 logger.Info("Minter is not installed");
                 logger.Info("Install Minter by running 'fastre install minter'");

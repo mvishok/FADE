@@ -5,12 +5,46 @@ using Newtonsoft.Json;
 using FADE;
 using System.Runtime.ConstrainedExecution;
 using System;
+using System.Runtime.InteropServices;
 
 public class Runner
 {
+    const int ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern IntPtr GetStdHandle(int nStdHandle);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool GetConsoleMode(IntPtr hConsoleHandle, out int lpMode);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool SetConsoleMode(IntPtr hConsoleHandle, int dwMode);
+
     Logger logger = new Logger();
     string? exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
     string? fastrePath;
+
+    public static async Task<int> cmdRunInput(string command)
+    {
+        // Enable ANSI colors in Windows console
+        IntPtr handle = GetStdHandle(-11);  // Get the console's standard output handle
+        GetConsoleMode(handle, out int mode);
+        SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+
+        Process process = new Process();
+        process.StartInfo.FileName = "cmd.exe";
+        process.StartInfo.Arguments = "/c " + command;
+        process.StartInfo.UseShellExecute = false;  // Attach to current console
+        process.StartInfo.RedirectStandardInput = false;  // No input/output redirection
+        process.StartInfo.RedirectStandardOutput = false;
+        process.StartInfo.RedirectStandardError = false;
+        process.StartInfo.CreateNoWindow = false;  // Use current terminal
+
+        process.Start();
+
+        await process.WaitForExitAsync();  // Wait for the process to exit
+        return process.ExitCode;  // Return the exit code
+    }
 
     static int Main(string[] args)
     {
@@ -24,7 +58,7 @@ public class Runner
         return new AppRunner<Runner>().Run(args);
     }
 
-    public async Task<Task> fastre(string arg)
+    public async Task<Task> Fastre(string arg)
     {
         //Check if fastre is installed
         Process installed = Cmd.cmd("which fastre");
@@ -128,7 +162,7 @@ public class Runner
     public async Task<Task> minter(string? arg)
     {
         //Check if minter is installed in exeDir/minter
-        if (!Directory.Exists(exeDir + "\\minter") || !File.Exists(exeDir + "\\minter\\minter.exe"))
+        if (!Directory.Exists(exeDir + "\\minter") || !File.Exists(exeDir + "\\minter\\minter.jar"))
         {
             logger.Info("minter is not installed");
             logger.Info("Install minter by running 'fade install minter'");
@@ -148,36 +182,31 @@ public class Runner
             logger.Warning("A new version of minter is available. Run 'fade update minter' to update.\n");
         }
 
-        if (arg == null || arg == "")
+        //split the arg string by space
+        string[] args = new string[0];
+        if (arg != null)
         {
-
-            Process process = new Process();
-            process.StartInfo.FileName = "cmd.exe";
-            process.StartInfo.Arguments = "/c start " + exeDir + "\\minter\\minter.exe";
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.CreateNoWindow = true;
-            process.Start();
-            return Task.CompletedTask;
+            args = arg.Split(' ');
         }
 
-        //split the arg string by space
-        string[] args = arg.Split(' ');
-
-        if (args.Length > 1)
+        if (args.Length > 0 && args[0] != "")
         {
             //the first argument is the path to the file. convert it to absolute path if it is relative to the caller's directory
-            if (!Path.IsPathRooted(args[1]))
+            if (!Path.IsPathRooted(args[0]))
             {
-                args[1] = Path.GetFullPath(args[1]);
+                //get the cwd
+                string callerDir = Cmd.cmdString("cd");
+                callerDir = callerDir.Substring(0, callerDir.Length - 1);
+                args[0] = Path.Combine(callerDir, args[0]);
             }
         }
 
         arg = string.Join(" ", args);
 
-        //start "exeDir/minter/minter.exe" with the arguments
-        int exitCode = await Cmd.cmdRun("cd " + exeDir + "\\minter && minter.exe " + arg);
+        //start "exeDir/minter/minter.jar" with the arguments
+
+        int exitCode = await cmdRunInput("cd \"" + exeDir + "\\minter\" && java -jar minter.jar " + arg);
+
         if (exitCode != 0) {
             Console.Write("\n");
             logger.Error("Minter exited with code " + exitCode);
