@@ -58,7 +58,7 @@ public class Runner
         return new AppRunner<Runner>().Run(args);
     }
 
-    public async Task<Task> Fastre(string arg)
+    public async Task<Task> fastre(string arg)
     {
         //Check if fastre is installed
         Process installed = Cmd.cmd("which fastre");
