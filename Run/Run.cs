@@ -152,7 +152,9 @@ public class Runner
         arg = arg.Replace("$", "--");
 
         //start "exeDir/autobase/autobase.exe" with the arguments
-        int exitCode = await Cmd.cmdRun("cd " + exeDir + "\\autobase && autobase.exe " + arg);
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+        int exitCode = await Cmd.cmdRun($"cd {exeDir}\\autobase && {exeDir[..2]} && autobase.exe {arg}");
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
         if (exitCode != 0)
         {
