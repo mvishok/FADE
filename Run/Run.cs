@@ -21,7 +21,7 @@ public class Runner
     static extern bool SetConsoleMode(IntPtr hConsoleHandle, int dwMode);
 
     Logger logger = new Logger();
-    string? exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+    static readonly string? exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
     string? fastrePath;
 
     public static async Task<int> cmdRunInput(string command)
@@ -48,6 +48,10 @@ public class Runner
 
     static int Main(string[] args)
     {
+        if (string.IsNullOrEmpty(exeDir)){
+            Console.WriteLine("Failed to determine the executable directory.");
+            return 1;
+        }
         Console.CancelKeyPress += (sender, e) =>
         {
             Cmd.KillChildProcesses();
