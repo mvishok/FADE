@@ -208,8 +208,9 @@ public class Runner
         arg = string.Join(" ", args);
 
         //start "exeDir/minter/minter.jar" with the arguments
-
-        int exitCode = await cmdRunInput("cd \"" + exeDir + "\\minter\" && java -jar minter.jar " + arg);
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+        int exitCode = await cmdRunInput($"cd \"{exeDir}\\minter\" && {exeDir[..2]} && java -jar minter.jar {arg}");
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
         if (exitCode != 0) {
             Console.Write("\n");
